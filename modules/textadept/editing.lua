@@ -595,8 +595,34 @@ function M.convert_indentation()
   buffer:end_undo_action()
 end
 
----
--- Passes the selected text or all buffer text to string shell command *command*
+-- Overlay text starting from given position, left align at column position.  Append lines if necessary.
+-- This is used for overlaying the output of external commands at anchor position after pasting a rectangular block selection
+function overlay_text(text, pos)
+    local original_pos = pos
+    local original_line_count = buffer.line_count
+    local block_left_column = buffer.column[pos]
+    buffer:goto_pos(pos)
+    for str in text:gmatch("[^\r\n]+") do
+      if buffer:line_from_position(original_pos) + 1 <= buffer:line_from_position(pos) and buffer:line_from_position(pos) < original_line_count then
+        buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1, block_left_column))
+        local fill_space = block_left_column - buffer.column[buffer.current_pos]
+        buffer:insert_text(buffer.current_pos, string.format("%" .. tostring(fill_space) .. "s",""))
+        buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1, block_left_column))
+      elseif buffer:line_from_position(pos) >= original_line_count then
+        buffer:goto_pos(buffer.line_end_position[buffer:line_from_position(pos)])
+        buffer:insert_text(buffer.current_pos, string.format("\n%" .. tostring(block_left_column - 1) .. "s",""))
+        buffer:goto_pos(buffer.line_end_position[buffer:line_from_position(buffer.current_pos) + 1])
+      end
+      pos = buffer.current_pos
+      buffer:delete_range(pos, string.len(str))
+      buffer:insert_text(pos, str)
+      if buffer:line_from_position(pos) == buffer:line_from_position(original_pos) then
+        buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1, block_left_column))
+      end
+    end
+end
+
+----- Standard-- standard output (stdout). *command* may contain shell pipes ('|').
 -- as standard input (stdin) and replaces the input text with the command's
 -- standard output (stdout). *command* may contain shell pipes ('|').
 -- Standard input is as follows:
@@ -615,6 +641,7 @@ function M.filter_through(command)
   assert(not (WIN32 and CURSES), 'not implemented in this environment')
   assert_type(command, 'string', 1)
   local s, e = buffer.selection_start, buffer.selection_end
+  local k, l = buffer.rectangular_selection_anchor, buffer.rectangular_selection_caret
   if s == e then
     -- Use the whole buffer as input.
     buffer:target_whole_document()
@@ -633,7 +660,11 @@ function M.filter_through(command)
     str = '"' * (1 - lpeg.S('"\\') + lpeg.P('\\') * 1)^0 * lpeg.P('"')^-1 +
       "'" * (1 - lpeg.S("'\\") + lpeg.P('\\') * 1)^0 * lpeg.P("'")^-1,
   }), command)
-  local output = buffer.target_text
+  if k ~= l then
+    output = buffer:get_sel_text()
+  else
+    output = buffer.target_text
+  end
   for i = 1, #commands do
     local p = assert(os.spawn(commands[i]:match('^%s*(.-)%s*$')))
     p:write(output)
@@ -645,7 +676,11 @@ function M.filter_through(command)
       return
     end
   end
-  buffer:replace_target(output:iconv('UTF-8', _CHARSET))
+  if k ~= l then
+    overlay_text(output:iconv('UTF-8', _CHARSET), k)
+  else
+    buffer:replace_target(output:iconv('UTF-8', _CHARSET))
+  end
   if s == e then buffer:goto_pos(s) return end
   buffer:set_sel(buffer.target_start, buffer.target_end)
 end
