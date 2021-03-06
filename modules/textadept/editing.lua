@@ -599,28 +599,38 @@ end
 -- Append lines if necessary. This is used for overlaying the output of external
 -- commands at anchor position after pasting a rectangular block selection
 function overlay_text(text, pos)
-    local original_pos = pos
-    local original_line_count = buffer.line_count
-    local block_left_column = buffer.column[pos]
-    buffer:goto_pos(pos)
-    for str in text:gmatch("[^\r\n]+") do
-      if buffer:line_from_position(original_pos) + 1 <= buffer:line_from_position(pos) and buffer:line_from_position(pos) < original_line_count then
-        buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1, block_left_column))
-        local fill_space = block_left_column - buffer.column[buffer.current_pos]
-        buffer:insert_text(buffer.current_pos, string.format("%" .. tostring(fill_space) .. "s",""))
-        buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1, block_left_column))
-      elseif buffer:line_from_position(pos) >= original_line_count then
-        buffer:goto_pos(buffer.line_end_position[buffer:line_from_position(pos)])
-        buffer:insert_text(buffer.current_pos, string.format("\n%" .. tostring(block_left_column - 1) .. "s",""))
-        buffer:goto_pos(buffer.line_end_position[buffer:line_from_position(buffer.current_pos) + 1])
-      end
-      pos = buffer.current_pos
-      buffer:delete_range(pos, math.min(buffer:line_length(buffer:line_from_position(pos)) - block_left_column, string.len(str)))
-      buffer:insert_text(pos, str)
-      if buffer:line_from_position(pos) == buffer:line_from_position(original_pos) then
-        buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1, block_left_column))
-      end
+  local original_pos = pos
+  local original_line_count = buffer.line_count
+  local block_left_column = buffer.column[pos]
+  buffer:goto_pos(pos)
+  for str in text:gmatch("[^\r\n]+") do
+    if buffer:line_from_position(original_pos) + 1 <=
+        buffer:line_from_position(pos) and buffer:line_from_position(pos) <
+        original_line_count then
+      buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1,
+                                         block_left_column))
+      local fill_space = block_left_column - buffer.column[buffer.current_pos]
+      buffer:insert_text(buffer.current_pos,
+                         string.format("%" .. tostring(fill_space) .. "s", ""))
+      buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1,
+                                         block_left_column))
+    elseif buffer:line_from_position(pos) >= original_line_count then
+      buffer:goto_pos(buffer.line_end_position[buffer:line_from_position(pos)])
+      buffer:insert_text(buffer.current_pos, string.format(
+                             "\n%" .. tostring(block_left_column - 1) .. "s", ""))
+      buffer:goto_pos(buffer.line_end_position[buffer:line_from_position(
+                          buffer.current_pos) + 1])
     end
+    pos = buffer.current_pos
+    buffer:delete_range(pos, math.min(buffer:line_length(
+                                          buffer:line_from_position(pos)) -
+                                          block_left_column, string.len(str)))
+    buffer:insert_text(pos, str)
+    if buffer:line_from_position(pos) == buffer:line_from_position(original_pos) then
+      buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1,
+                                         block_left_column))
+    end
+  end
 end
 
 ----- Standard-- standard output (stdout). *command* may contain shell pipes ('|').
@@ -642,7 +652,8 @@ function M.filter_through(command)
   assert(not (WIN32 and CURSES), 'not implemented in this environment')
   assert_type(command, 'string', 1)
   local s, e = buffer.selection_start, buffer.selection_end
-  local k, l = buffer.rectangular_selection_anchor, buffer.rectangular_selection_caret
+  local k, l = buffer.rectangular_selection_anchor,
+               buffer.rectangular_selection_caret
   if s == e then
     -- Use the whole buffer as input.
     buffer:target_whole_document()
