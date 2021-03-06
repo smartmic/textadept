@@ -595,8 +595,9 @@ function M.convert_indentation()
   buffer:end_undo_action()
 end
 
--- Overlay text starting from given position, left align at column position.  Append lines if necessary.
--- This is used for overlaying the output of external commands at anchor position after pasting a rectangular block selection
+-- Overlay text starting from given position, left align at column position.
+-- Append lines if necessary. This is used for overlaying the output of external
+-- commands at anchor position after pasting a rectangular block selection
 function overlay_text(text, pos)
     local original_pos = pos
     local original_line_count = buffer.line_count
@@ -614,7 +615,7 @@ function overlay_text(text, pos)
         buffer:goto_pos(buffer.line_end_position[buffer:line_from_position(buffer.current_pos) + 1])
       end
       pos = buffer.current_pos
-      buffer:delete_range(pos, string.len(str))
+      buffer:delete_range(pos, math.min(buffer:line_length(buffer:line_from_position(pos)) - block_left_column, string.len(str)))
       buffer:insert_text(pos, str)
       if buffer:line_from_position(pos) == buffer:line_from_position(original_pos) then
         buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1, block_left_column))
