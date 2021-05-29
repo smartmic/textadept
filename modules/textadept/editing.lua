@@ -622,9 +622,7 @@ function overlay_text(text, pos)
                           buffer.current_pos) + 1])
     end
     pos = buffer.current_pos
-    buffer:delete_range(pos, math.min(buffer:line_length(
-                                          buffer:line_from_position(pos)) -
-                                          block_left_column, string.len(str)))
+    buffer:delete_range(pos, string.len(str))
     buffer:insert_text(pos, str)
     if buffer:line_from_position(pos) == buffer:line_from_position(original_pos) then
       buffer:goto_pos(buffer:find_column(buffer:line_from_position(pos) + 1,
